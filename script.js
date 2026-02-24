@@ -19,8 +19,12 @@ async function fetchTrakt(url, containerId, type) {
         const container = document.getElementById(containerId);
         
         data.slice(0, 15).forEach(item => {
-            // Trakt returns movies as item.movie and shows as item.show
+            // FIX: Check if media is nested (Trending) or top-level (Popular/Anticipated)
             const media = item.movie || item.show || item;
+            
+            // Log for debugging (Remove once it works)
+            console.log(`Loading ${type}:`, media.title);
+
             if (media.ids && media.ids.tmdb) {
                 renderCard(media.title, media.ids.tmdb, type, container);
             }
