@@ -48,24 +48,46 @@ async function fetchTrakt(url, containerId, type) {
     }
 }
 
+/* ================================
+   CARD RENDERER
+================================ */
 async function renderCard(title, id, type, container) {
     if (!id) return;
+
     const card = document.createElement('div');
     card.className = 'card';
-    card.innerHTML = `<div class="poster"></div><div class="card-title">${title}</div>`;
+    card.innerHTML = `
+        <div class="poster" style="background:#2c2c2e;"></div>
+        <div class="card-title">${title}</div>
+    `;
     card.onclick = () => showDetails(id, type);
     container.appendChild(card);
 
     try {
         const res = await fetch(`https://api.themoviedb.org/3/${type}/${id}?api_key=${TMDB_KEY}`);
         const data = await res.json();
-        if (data.poster_path) {
+        const posterPath = data.poster_path || data.backdrop_path;
+        if (posterPath) {
             const posterDiv = card.querySelector('.poster');
-            posterDiv.outerHTML = `<img class="poster" src="https://image.tmdb.org/t/p/w342${data.poster_path}" alt="${title}">`;
+            posterDiv.innerHTML = `<img class="poster" src="https://image.tmdb.org/t/p/w342${posterPath}" alt="${title}">`;
         }
     } catch (err) {
         console.error("Error fetching poster:", err);
     }
+}
+
+/* ================================
+   SEARCH CARD RENDERER
+================================ */
+function renderSearchCard(title, id, type, container, posterPath) {
+    const card = document.createElement('div');
+    card.className = 'card';
+    card.innerHTML = `
+        <img class="poster" src="https://image.tmdb.org/t/p/w342${posterPath}" alt="${title}">
+        <div class="card-title">${title}</div>
+    `;
+    card.onclick = () => showDetails(id, type);
+    container.appendChild(card);
 }
 
 /* ================================
@@ -80,22 +102,26 @@ async function showDetails(id, type) {
     try {
         const res = await fetch(`https://api.themoviedb.org/3/${type}/${id}?api_key=${TMDB_KEY}&append_to_response=videos`);
         const data = await res.json();
+
+        const title = data.title || data.name || "Unknown Title";
+        const overview = data.overview || "No description available.";
+        const vote = data.vote_average ? data.vote_average.toFixed(1) : "N/A";
+        const poster = data.backdrop_path || data.poster_path || "";
         const trailer = data.videos?.results.find(v => v.type === 'Trailer' && v.site === 'YouTube');
 
         body.innerHTML = `
-            <img class="details-poster" src="https://image.tmdb.org/t/p/w780${data.backdrop_path || data.poster_path}">
-            <div class="details-title">${data.title || data.name}</div>
-            <div style="color:var(--accent); margin:10px 0;">★ ${data.vote_average ? data.vote_average.toFixed(1) : 'N/A'}</div>
-            <div class="details-overview">${data.overview || 'No description available.'}</div>
-
+            ${poster ? `<img class="details-poster" src="https://image.tmdb.org/t/p/w780${poster}" alt="${title}">` : ''}
+            <div class="details-title">${title}</div>
+            <div style="color:var(--accent); margin:10px 0;">★ ${vote}</div>
+            <div class="details-overview">${overview}</div>
             ${trailer ? `<a href="https://youtube.com/watch?v=${trailer.key}" target="_blank" class="trailer-btn">Watch Trailer</a>` : ''}
-
             <div style="margin-top:20px;">
                 <button class="action-btn" onclick="addToTrakt(${id}, '${type}')">Add to Trakt List</button>
                 ${type === 'movie' ? `<button class="action-btn" onclick="addToTMDB(${id})">Add to TMDB List</button>` : ''}
             </div>
         `;
     } catch (err) {
+        console.error("Error loading details:", err);
         body.innerHTML = '<p>Error loading details.</p>';
     }
 }
@@ -129,7 +155,6 @@ async function exchangeTraktToken(code) {
             grant_type: 'authorization_code'
         })
     });
-
     const data = await res.json();
     localStorage.setItem('trakt_token', data.access_token);
     cleanURL();
@@ -141,9 +166,6 @@ function loginTrakt() {
         `https://api.trakt.tv/oauth/authorize?response_type=code&client_id=${TRAKT_ID}&redirect_uri=${encodeURIComponent(REDIRECT_URI)}`;
 }
 
-/* ================================
-   TMDB AUTH
-================================ */
 async function loginTMDB() {
     const res = await fetch(`https://api.themoviedb.org/3/authentication/token/new?api_key=${TMDB_KEY}`);
     const data = await res.json();
@@ -279,18 +301,22 @@ let timer;
 document.getElementById('search-input').oninput = (e) => {
     clearTimeout(timer);
     timer = setTimeout(async () => {
-        const query = e.target.value;
+        const query = e.target.value.trim();
         if (query.length < 3) return;
 
-        const res = await fetch(`https://api.themoviedb.org/3/search/multi?api_key=${TMDB_KEY}&query=${encodeURIComponent(query)}`);
-        const data = await res.json();
-        const results = document.getElementById('search-results');
-        results.innerHTML = '';
+        try {
+            const res = await fetch(`https://api.themoviedb.org/3/search/multi?api_key=${TMDB_KEY}&query=${encodeURIComponent(query)}`);
+            const data = await res.json();
+            const results = document.getElementById('search-results');
+            results.innerHTML = '';
 
-        data.results.forEach(item => {
-            if (item.poster_path && (item.media_type === 'movie' || item.media_type === 'tv')) {
-                renderCard(item.title || item.name, item.id, item.media_type, results);
-            }
-        });
+            data.results.forEach(item => {
+                if (item.poster_path && (item.media_type === 'movie' || item.media_type === 'tv')) {
+                    renderSearchCard(item.title || item.name, item.id, item.media_type, results, item.poster_path);
+                }
+            });
+        } catch (err) {
+            console.error("Search error:", err);
+        }
     }, 500);
 };
