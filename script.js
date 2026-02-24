@@ -1,58 +1,32 @@
 const TMDB_KEY = '37cc8cb617e62d17e6180754e7a94139';
 const TRAKT_ID = 'e2b666343235c45fc18f12f2f256c29e5bb5977bc6ca9ca8d6a5bef7a7d6778f';
 
-// IMPORTANT: For live-fetch of private lists, you need an Access Token.
-// You can get this from your Trakt API App dashboard for your own account.
-const ACCESS_TOKEN = localStorage.getItem('trakt_token') || 'YOUR_MANUAL_ACCESS_TOKEN';
-
 async function init() {
-    // 1. Fetch Trending (Public)
-    fetchTrakt('https://api.trakt.tv/movies/trending', 'trending-movies', 'movie', false);
-
-    // 2. Fetch Live Personal Data (Private)
-    if (ACCESS_TOKEN) {
-        document.getElementById('auth-btn').innerText = 'Connected';
-        document.getElementById('collection-sec').classList.remove('hidden');
-        document.getElementById('watchlist-sec').classList.remove('hidden');
-
-        fetchTrakt('https://api.trakt.tv/sync/collection/shows', 'my-collection', 'tv', true);
-        fetchTrakt('https://api.trakt.tv/sync/watchlist/shows', 'my-watchlist', 'tv', true);
-    }
+    fetchTrakt('https://api.trakt.tv/movies/trending', 'trending-movies', 'movie');
+    fetchTrakt('https://api.trakt.tv/shows/popular', 'popular-shows', 'tv');
+    fetchTrakt('https://api.trakt.tv/shows/anticipated', 'anticipated', 'tv');
 }
 
-async function fetchTrakt(url, containerId, type, isPrivate) {
-    const headers = {
-        'Content-Type': 'application/json',
-        'trakt-api-version': '2',
-        'trakt-api-key': TRAKT_ID
-    };
-
-    if (isPrivate) {
-        headers['Authorization'] = `Bearer ${ACCESS_TOKEN}`;
-    }
-
-    try {
-        const res = await fetch(url, { headers });
-        const data = await res.json();
-        const container = document.getElementById(containerId);
-        
-        data.slice(0, 15).forEach(item => {
-            const media = item.movie || item.show || item;
-            renderCard(media.title, media.ids.tmdb, type, container);
-        });
-    } catch (e) {
-        console.error("Live Fetch Failed:", e);
-    }
+async function fetchTrakt(url, containerId, type) {
+    const res = await fetch(url, { headers: { 'trakt-api-version': '2', 'trakt-api-key': TRAKT_ID }});
+    const data = await res.json();
+    const container = document.getElementById(containerId);
+    
+    data.slice(0, 15).forEach(item => {
+        const media = item.movie || item.show || item;
+        renderCard(media.title, media.ids.tmdb, type, container);
+    });
 }
 
 async function renderCard(title, id, type, container) {
+    if (!id) return;
     const card = document.createElement('div');
     card.className = 'card';
     card.innerHTML = `<div class="poster"></div><div class="card-title">${title}</div>`;
     card.onclick = () => showDetails(id, type);
     container.appendChild(card);
 
-    // Live poster fetch from TMDB
+    // Dynamic Poster Fetch
     const res = await fetch(`https://api.themoviedb.org/3/${type}/${id}?api_key=${TMDB_KEY}`);
     const data = await res.json();
     if (data.poster_path) {
@@ -64,7 +38,7 @@ async function showDetails(id, type) {
     const modal = document.getElementById('modal-overlay');
     const body = document.getElementById('modal-body');
     modal.classList.remove('modal-hidden');
-    body.innerHTML = 'Loading...';
+    body.innerHTML = '<p style="text-align:center">Loading...</p>';
 
     const res = await fetch(`https://api.themoviedb.org/3/${type}/${id}?api_key=${TMDB_KEY}&append_to_response=videos`);
     const data = await res.json();
@@ -73,7 +47,7 @@ async function showDetails(id, type) {
     body.innerHTML = `
         <img class="details-poster" src="https://image.tmdb.org/t/p/w780${data.backdrop_path || data.poster_path}">
         <div class="details-title">${data.title || data.name}</div>
-        <div style="color:var(--accent); margin-bottom:10px;">★ ${data.vote_average.toFixed(1)}</div>
+        <div style="color:var(--accent); margin:10px 0;">★ ${data.vote_average.toFixed(1)}</div>
         <div class="details-overview">${data.overview}</div>
         ${trailer ? `<a href="https://youtube.com/watch?v=${trailer.key}" target="_blank" class="trailer-btn">Watch Trailer</a>` : ''}
     `;
