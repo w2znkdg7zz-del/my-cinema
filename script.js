@@ -8,14 +8,26 @@ async function init() {
 }
 
 async function fetchTrakt(url, containerId, type) {
-    const res = await fetch(url, { headers: { 'trakt-api-version': '2', 'trakt-api-key': TRAKT_ID }});
-    const data = await res.json();
-    const container = document.getElementById(containerId);
-    
-    data.slice(0, 15).forEach(item => {
-        const media = item.movie || item.show || item;
-        renderCard(media.title, media.ids.tmdb, type, container);
-    });
+    try {
+        const res = await fetch(url, { 
+            headers: { 
+                'trakt-api-version': '2', 
+                'trakt-api-key': TRAKT_ID 
+            }
+        });
+        const data = await res.json();
+        const container = document.getElementById(containerId);
+        
+        data.slice(0, 15).forEach(item => {
+            // Trakt returns movies as item.movie and shows as item.show
+            const media = item.movie || item.show || item;
+            if (media.ids && media.ids.tmdb) {
+                renderCard(media.title, media.ids.tmdb, type, container);
+            }
+        });
+    } catch (err) {
+        console.error("Error fetching Trakt data:", err);
+    }
 }
 
 async function renderCard(title, id, type, container) {
@@ -26,11 +38,16 @@ async function renderCard(title, id, type, container) {
     card.onclick = () => showDetails(id, type);
     container.appendChild(card);
 
-    // Dynamic Poster Fetch
-    const res = await fetch(`https://api.themoviedb.org/3/${type}/${id}?api_key=${TMDB_KEY}`);
-    const data = await res.json();
-    if (data.poster_path) {
-        card.querySelector('.poster').outerHTML = `<img class="poster" src="https://image.tmdb.org/t/p/w342${data.poster_path}">`;
+    // Dynamic Poster Fetch from TMDB
+    try {
+        const res = await fetch(`https://api.themoviedb.org/3/${type}/${id}?api_key=${TMDB_KEY}`);
+        const data = await res.json();
+        if (data.poster_path) {
+            const posterDiv = card.querySelector('.poster');
+            posterDiv.outerHTML = `<img class="poster" src="https://image.tmdb.org/t/p/w342${data.poster_path}" alt="${title}">`;
+        }
+    } catch (err) {
+        console.error("Error fetching poster:", err);
     }
 }
 
@@ -38,19 +55,23 @@ async function showDetails(id, type) {
     const modal = document.getElementById('modal-overlay');
     const body = document.getElementById('modal-body');
     modal.classList.remove('modal-hidden');
-    body.innerHTML = '<p style="text-align:center">Loading...</p>';
+    body.innerHTML = '<p style="text-align:center; padding-top:50px;">Loading...</p>';
 
-    const res = await fetch(`https://api.themoviedb.org/3/${type}/${id}?api_key=${TMDB_KEY}&append_to_response=videos`);
-    const data = await res.json();
-    const trailer = data.videos?.results.find(v => v.type === 'Trailer');
+    try {
+        const res = await fetch(`https://api.themoviedb.org/3/${type}/${id}?api_key=${TMDB_KEY}&append_to_response=videos`);
+        const data = await res.json();
+        const trailer = data.videos?.results.find(v => v.type === 'Trailer' && v.site === 'YouTube');
 
-    body.innerHTML = `
-        <img class="details-poster" src="https://image.tmdb.org/t/p/w780${data.backdrop_path || data.poster_path}">
-        <div class="details-title">${data.title || data.name}</div>
-        <div style="color:var(--accent); margin:10px 0;">★ ${data.vote_average.toFixed(1)}</div>
-        <div class="details-overview">${data.overview}</div>
-        ${trailer ? `<a href="https://youtube.com/watch?v=${trailer.key}" target="_blank" class="trailer-btn">Watch Trailer</a>` : ''}
-    `;
+        body.innerHTML = `
+            <img class="details-poster" src="https://image.tmdb.org/t/p/w780${data.backdrop_path || data.poster_path}">
+            <div class="details-title">${data.title || data.name}</div>
+            <div style="color:var(--accent); margin:10px 0;">★ ${data.vote_average ? data.vote_average.toFixed(1) : 'N/A'}</div>
+            <div class="details-overview">${data.overview || 'No description available.'}</div>
+            ${trailer ? `<a href="https://youtube.com/watch?v=${trailer.key}" target="_blank" class="trailer-btn">Watch Trailer</a>` : ''}
+        `;
+    } catch (err) {
+        body.innerHTML = '<p>Error loading details.</p>';
+    }
 }
 
 // UI Controls
@@ -65,12 +86,16 @@ document.getElementById('search-input').oninput = (e) => {
     timer = setTimeout(async () => {
         const query = e.target.value;
         if (query.length < 3) return;
-        const res = await fetch(`https://api.themoviedb.org/3/search/multi?api_key=${TMDB_KEY}&query=${query}`);
+        
+        const res = await fetch(`https://api.themoviedb.org/3/search/multi?api_key=${TMDB_KEY}&query=${encodeURIComponent(query)}`);
         const data = await res.json();
         const results = document.getElementById('search-results');
         results.innerHTML = '';
+        
         data.results.forEach(item => {
-            if (item.poster_path) renderCard(item.title || item.name, item.id, item.media_type, results);
+            if (item.poster_path && (item.media_type === 'movie' || item.media_type === 'tv')) {
+                renderCard(item.title || item.name, item.id, item.media_type, results);
+            }
         });
     }, 500);
 };
