@@ -1,55 +1,104 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>MyStream</title>
-    <link rel="stylesheet" href="style.css">
-</head>
-<body>
-    <div id="status-bar-spacer"></div>
-    
-    <header>
-        <h1>Discover</h1>
-    </header>
+const TMDB_KEY = '37cc8cb617e62d17e6180754e7a94139';
+const TRAKT_ID = 'e2b666343235c45fc18f12f2f256c29e5bb5977bc6ca9ca8d6a5bef7a7d6778f';
 
-    <main id="content">
-        <section>
-            <h2 class="section-label">Trending Movies</h2>
-            <div class="horizontal-scroller" id="trending-movies">
-                </div>
-        </section>
+// IMPORTANT: For live-fetch of private lists, you need an Access Token.
+// You can get this from your Trakt API App dashboard for your own account.
+const ACCESS_TOKEN = localStorage.getItem('trakt_token') || 'YOUR_MANUAL_ACCESS_TOKEN';
 
-        <section>
-            <h2 class="section-label">Popular Shows</h2>
-            <div class="horizontal-scroller" id="popular-shows">
-                </div>
-        </section>
-    </main>
+async function init() {
+    // 1. Fetch Trending (Public)
+    fetchTrakt('https://api.trakt.tv/movies/trending', 'trending-movies', 'movie', false);
 
-    <div id="search-overlay" class="modal-hidden">
-    <div class="search-header">
-        <input type="text" id="search-input" placeholder="Search movies & shows..." autofocus>
-        <button id="search-close">Cancel</button>
-    </div>
-    <div id="search-results" class="grid"></div>
-</div>
+    // 2. Fetch Live Personal Data (Private)
+    if (ACCESS_TOKEN) {
+        document.getElementById('auth-btn').innerText = 'Connected';
+        document.getElementById('collection-sec').classList.remove('hidden');
+        document.getElementById('watchlist-sec').classList.remove('hidden');
 
-<nav class="tab-bar">
-    <div class="tab-item active" onclick="location.reload()"><span>🏠</span><label>Home</label></div>
-    <div class="tab-item" id="nav-search"><span>🔍</span><label>Search</label></div>
-    <div class="tab-item"><span>📚</span><label>Lists</label></div>
-</nav>
+        fetchTrakt('https://api.trakt.tv/sync/collection/shows', 'my-collection', 'tv', true);
+        fetchTrakt('https://api.trakt.tv/sync/watchlist/shows', 'my-watchlist', 'tv', true);
+    }
+}
 
-    <div id="modal-overlay" class="modal-hidden">
-    <div id="modal-content">
-        <button id="modal-close">&times;</button>
-        <div id="modal-body">
-            </div>
-    </div>
-</div>
-    <script src="script.js"></script>
-</body>
-</html>
+async function fetchTrakt(url, containerId, type, isPrivate) {
+    const headers = {
+        'Content-Type': 'application/json',
+        'trakt-api-version': '2',
+        'trakt-api-key': TRAKT_ID
+    };
+
+    if (isPrivate) {
+        headers['Authorization'] = `Bearer ${ACCESS_TOKEN}`;
+    }
+
+    try {
+        const res = await fetch(url, { headers });
+        const data = await res.json();
+        const container = document.getElementById(containerId);
+        
+        data.slice(0, 15).forEach(item => {
+            const media = item.movie || item.show || item;
+            renderCard(media.title, media.ids.tmdb, type, container);
+        });
+    } catch (e) {
+        console.error("Live Fetch Failed:", e);
+    }
+}
+
+async function renderCard(title, id, type, container) {
+    const card = document.createElement('div');
+    card.className = 'card';
+    card.innerHTML = `<div class="poster"></div><div class="card-title">${title}</div>`;
+    card.onclick = () => showDetails(id, type);
+    container.appendChild(card);
+
+    // Live poster fetch from TMDB
+    const res = await fetch(`https://api.themoviedb.org/3/${type}/${id}?api_key=${TMDB_KEY}`);
+    const data = await res.json();
+    if (data.poster_path) {
+        card.querySelector('.poster').outerHTML = `<img class="poster" src="https://image.tmdb.org/t/p/w342${data.poster_path}">`;
+    }
+}
+
+async function showDetails(id, type) {
+    const modal = document.getElementById('modal-overlay');
+    const body = document.getElementById('modal-body');
+    modal.classList.remove('modal-hidden');
+    body.innerHTML = 'Loading...';
+
+    const res = await fetch(`https://api.themoviedb.org/3/${type}/${id}?api_key=${TMDB_KEY}&append_to_response=videos`);
+    const data = await res.json();
+    const trailer = data.videos?.results.find(v => v.type === 'Trailer');
+
+    body.innerHTML = `
+        <img class="details-poster" src="https://image.tmdb.org/t/p/w780${data.backdrop_path || data.poster_path}">
+        <div class="details-title">${data.title || data.name}</div>
+        <div style="color:var(--accent); margin-bottom:10px;">★ ${data.vote_average.toFixed(1)}</div>
+        <div class="details-overview">${data.overview}</div>
+        ${trailer ? `<a href="https://youtube.com/watch?v=${trailer.key}" target="_blank" class="trailer-btn">Watch Trailer</a>` : ''}
+    `;
+}
+
+// UI Controls
+document.getElementById('nav-search').onclick = () => document.getElementById('search-overlay').classList.remove('modal-hidden');
+document.getElementById('search-close').onclick = () => document.getElementById('search-overlay').classList.add('modal-hidden');
+document.getElementById('modal-close').onclick = () => document.getElementById('modal-overlay').classList.add('modal-hidden');
+
+// Search Logic
+let timer;
+document.getElementById('search-input').oninput = (e) => {
+    clearTimeout(timer);
+    timer = setTimeout(async () => {
+        const query = e.target.value;
+        if (query.length < 3) return;
+        const res = await fetch(`https://api.themoviedb.org/3/search/multi?api_key=${TMDB_KEY}&query=${query}`);
+        const data = await res.json();
+        const results = document.getElementById('search-results');
+        results.innerHTML = '';
+        data.results.forEach(item => {
+            if (item.poster_path) renderCard(item.title || item.name, item.id, item.media_type, results);
+        });
+    }, 500);
+};
+
+init();
