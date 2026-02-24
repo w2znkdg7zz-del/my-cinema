@@ -16,7 +16,6 @@ let pendingAction = null;
 ================================ */
 init();
 handleOAuthCallback();
-updateAuthUI(); // Initial check for login status
 
 async function init() {
     fetchTrakt('https://api.trakt.tv/movies/trending', 'trending-movies', 'movie');
@@ -25,7 +24,7 @@ async function init() {
 }
 
 /* ================================
-   TRAKT FETCH & RENDER
+   TRKT FETCH & RENDER
 ================================ */
 async function fetchTrakt(url, containerId, type) {
     try {
@@ -102,7 +101,7 @@ async function showDetails(id, type) {
 }
 
 /* ================================
-   OAUTH HANDLING (TRAKT & TMDB)
+   OAUTH HANDLING
 ================================ */
 function handleOAuthCallback() {
     const params = new URLSearchParams(window.location.search);
@@ -119,40 +118,38 @@ function handleOAuthCallback() {
 }
 
 async function exchangeTraktToken(code) {
-    try {
-        const res = await fetch('https://api.trakt.tv/oauth/token', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                code,
-                client_id: TRAKT_ID,
-                client_secret: TRAKT_SECRET,
-                redirect_uri: REDIRECT_URI,
-                grant_type: 'authorization_code'
-            })
-        });
+    const res = await fetch('https://api.trakt.tv/oauth/token', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            code,
+            client_id: TRAKT_ID,
+            client_secret: TRAKT_SECRET,
+            redirect_uri: REDIRECT_URI,
+            grant_type: 'authorization_code'
+        })
+    });
 
-        const data = await res.json();
-        if (data.access_token) {
-            localStorage.setItem('trakt_token', data.access_token);
-            updateAuthUI();
-            cleanURL();
-            retryPendingAction();
-        }
-    } catch (err) {
-        console.error("Trakt Auth Error:", err);
-    }
+    const data = await res.json();
+    localStorage.setItem('trakt_token', data.access_token);
+    cleanURL();
+    retryPendingAction();
 }
 
 function loginTrakt() {
-    window.location.href = `https://api.trakt.tv/oauth/authorize?response_type=code&client_id=${TRAKT_ID}&redirect_uri=${encodeURIComponent(REDIRECT_URI)}`;
+    window.location.href =
+        `https://api.trakt.tv/oauth/authorize?response_type=code&client_id=${TRAKT_ID}&redirect_uri=${encodeURIComponent(REDIRECT_URI)}`;
 }
 
+/* ================================
+   TMDB AUTH
+================================ */
 async function loginTMDB() {
     const res = await fetch(`https://api.themoviedb.org/3/authentication/token/new?api_key=${TMDB_KEY}`);
     const data = await res.json();
     localStorage.setItem('tmdb_request_token', data.request_token);
-    window.location.href = `https://www.themoviedb.org/authenticate/${data.request_token}?redirect_to=${encodeURIComponent(REDIRECT_URI)}`;
+    window.location.href =
+        `https://www.themoviedb.org/authenticate/${data.request_token}?redirect_to=${encodeURIComponent(REDIRECT_URI)}`;
 }
 
 async function createTMDBSession() {
@@ -163,34 +160,9 @@ async function createTMDBSession() {
         body: JSON.stringify({ request_token })
     });
     const data = await res.json();
-    if (data.session_id) {
-        localStorage.setItem('tmdb_session', data.session_id);
-        updateAuthUI();
-        cleanURL();
-        retryPendingAction();
-    }
-}
-
-/* ================================
-   AUTH UI SYNC (PART E)
-================================ */
-function updateAuthUI() {
-    const traktToken = localStorage.getItem('trakt_token');
-    const tmdbSession = localStorage.getItem('tmdb_session');
-
-    if (traktToken) {
-        const btn = document.getElementById('login-trakt');
-        btn.textContent = "Trakt ✓";
-        btn.style.background = "#34c759";
-        btn.disabled = true;
-    }
-
-    if (tmdbSession) {
-        const btn = document.getElementById('login-tmdb');
-        btn.textContent = "TMDB ✓";
-        btn.style.background = "#34c759";
-        btn.disabled = true;
-    }
+    localStorage.setItem('tmdb_session', data.session_id);
+    cleanURL();
+    retryPendingAction();
 }
 
 /* ================================
@@ -272,8 +244,7 @@ function showListSelector(lists, callback) {
     body.innerHTML = '<h3>Select List</h3>';
     lists.forEach(list => {
         const btn = document.createElement('button');
-        btn.className = 'action-btn'; // Using existing style
-        btn.style.marginTop = '8px';
+        btn.className = 'list-btn';
         btn.textContent = list.name;
         btn.onclick = () => callback(list.ids?.slug || list.id);
         body.appendChild(btn);
@@ -295,13 +266,11 @@ function cleanURL() {
 }
 
 /* ================================
-   UI CONTROLS (PART D)
+   UI CONTROLS
 ================================ */
 document.getElementById('nav-search').onclick = () => document.getElementById('search-overlay').classList.remove('modal-hidden');
 document.getElementById('search-close').onclick = () => document.getElementById('search-overlay').classList.add('modal-hidden');
 document.getElementById('modal-close').onclick = () => document.getElementById('modal-overlay').classList.add('modal-hidden');
-document.getElementById('login-trakt').onclick = loginTrakt;
-document.getElementById('login-tmdb').onclick = loginTMDB;
 
 /* ================================
    SEARCH LOGIC
