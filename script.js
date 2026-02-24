@@ -234,38 +234,39 @@ function addToTrakt(id, type) {
         loginTrakt();
         return;
     }
-    fetchUserTraktLists(token, id, type);
-}
 
-async function fetchUserTraktLists(token, mediaId, type) {
-    const res = await fetch('https://api.trakt.tv/users/me/lists', {
+    // Fetch user lists from Trakt
+    fetch('https://api.trakt.tv/users/me/lists', {
         headers: {
             'Authorization': `Bearer ${token}`,
             'trakt-api-version': '2',
             'trakt-api-key': TRAKT_ID
         }
+    })
+    .then(res => res.json())
+    .then(lists => {
+        // Use the new clean list selector
+        showListSelector(lists, async (listId) => {
+            // Add the item to the chosen list
+            const body = {
+                [type === 'movie' ? 'movies' : 'shows']: [{
+                    ids: { tmdb: id }
+                }]
+            };
+            await fetch(`https://api.trakt.tv/users/me/lists/${listId}/items`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'trakt-api-version': '2',
+                    'trakt-api-key': TRAKT_ID,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(body)
+            });
+            alert('Added to Trakt list!');
+            document.getElementById('modal-overlay').classList.add('modal-hidden');
+        });
     });
-    const lists = await res.json();
-    showListSelector(lists, (listId) => addItemToTraktList(token, listId, mediaId, type));
-}
-
-async function addItemToTraktList(token, listId, mediaId, type) {
-    const body = {
-        [type === 'movie' ? 'movies' : 'shows']: [{
-            ids: { tmdb: mediaId }
-        }]
-    };
-    await fetch(`https://api.trakt.tv/users/me/lists/${listId}/items`, {
-        method: 'POST',
-        headers: {
-            'Authorization': `Bearer ${token}`,
-            'trakt-api-version': '2',
-            'trakt-api-key': TRAKT_ID,
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(body)
-    });
-    alert('Added to Trakt list!');
 }
 
 function addToTMDB(id) {
@@ -275,24 +276,23 @@ function addToTMDB(id) {
         loginTMDB();
         return;
     }
-    fetchTMDBLists(session, id);
-}
 
-async function fetchTMDBLists(session, mediaId) {
-    const account = await fetch(`https://api.themoviedb.org/3/account?api_key=${TMDB_KEY}&session_id=${session}`);
-    const accData = await account.json();
-    const res = await fetch(`https://api.themoviedb.org/3/account/${accData.id}/lists?api_key=${TMDB_KEY}&session_id=${session}`);
-    const lists = await res.json();
-    showListSelector(lists.results, (listId) => addToTMDBList(listId, mediaId, session));
-}
-
-async function addToTMDBList(listId, mediaId, session) {
-    await fetch(`https://api.themoviedb.org/3/list/${listId}/add_item?api_key=${TMDB_KEY}&session_id=${session}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ media_id: mediaId })
-    });
-    alert('Added to TMDB list!');
+    // Fetch user TMDB lists
+    fetch(`https://api.themoviedb.org/3/account?api_key=${TMDB_KEY}&session_id=${session}`)
+        .then(res => res.json())
+        .then(accData => fetch(`https://api.themoviedb.org/3/account/${accData.id}/lists?api_key=${TMDB_KEY}&session_id=${session}`))
+        .then(res => res.json())
+        .then(lists => {
+            showListSelector(lists.results, async (listId) => {
+                await fetch(`https://api.themoviedb.org/3/list/${listId}/add_item?api_key=${TMDB_KEY}&session_id=${session}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ media_id: id })
+                });
+                alert('Added to TMDB list!');
+                document.getElementById('modal-overlay').classList.add('modal-hidden');
+            });
+        });
 }
 /* ================================
    LIST SELECTOR UI WITH TMDB MEDIA TYPE
