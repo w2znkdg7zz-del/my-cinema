@@ -236,3 +236,72 @@ h1 {
   color: white;
   font-weight: bold;
 }
+/* ================================
+   SEE MORE CARD
+================================ */
+.card.see-more {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(10, 132, 255, 0.2); /* light accent overlay */
+    color: var(--accent);
+    font-weight: 700;
+    font-size: 14px;
+    text-align: center;
+    cursor: pointer;
+    transition: transform 0.2s, background 0.2s;
+}
+
+.card.see-more:hover {
+    transform: scale(1.05);
+    background: rgba(10, 132, 255, 0.3);
+}
+
+.card.see-more .poster {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 16px;
+    height: 100%;
+}
+
+/* Optional: add plus icon above "See More" text */
+.card.see-more .poster::before {
+    content: "+";
+    font-size: 24px;
+    display: block;
+    margin-bottom: 5px;
+    color: var(--accent);
+}
+
+/* ================================
+   MODAL GRID FOR SEE MORE
+================================ */
+#modal-body .grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    max-height: 70vh; /* scrollable modal area */
+    overflow-y: auto;
+    padding-bottom: 20px;
+}
+
+/* Optional: add some spacing for modal title */
+#modal-body h3 {
+    color: var(--text);
+    font-size: 20px;
+    font-weight: 800;
+    margin-bottom: 10px;
+}
+
+/* Adjust card titles inside modal */
+#modal-body .card-title {
+    font-size: 12px;
+}
+
+/* Adjust poster size inside modal grid if needed */
+#modal-body .poster {
+    aspect-ratio: 2/3;
+    object-fit: cover;
+}
