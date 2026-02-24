@@ -97,53 +97,53 @@ document.getElementById('modal-overlay').onclick = (e) => {
     }
 };
 
-/* Search Overlay Styles */
-#search-overlay {
-    position: fixed;
-    top: 0; left: 0; width: 100%; height: 100%;
-    background: var(--bg);
-    z-index: 2000;
-    padding-top: env(safe-area-inset-top);
-}
+// Add to your existing script.js
 
-.search-header {
-    display: flex;
-    padding: 15px 20px;
-    gap: 15px;
-    align-items: center;
-}
+const navSearch = document.getElementById('nav-search');
+const searchOverlay = document.getElementById('search-overlay');
+const searchInput = document.getElementById('search-input');
+const searchClose = document.getElementById('search-close');
+const searchResults = document.getElementById('search-results');
 
-#search-input {
-    flex: 1;
-    background: #1c1c1e;
-    border: none;
-    border-radius: 10px;
-    padding: 12px 15px;
-    color: white;
-    font-size: 17px;
-    outline: none;
-}
+// Open/Close Search
+navSearch.onclick = () => searchOverlay.classList.remove('modal-hidden');
+searchClose.onclick = () => {
+    searchOverlay.classList.add('modal-hidden');
+    searchInput.value = '';
+    searchResults.innerHTML = '';
+};
 
-#search-close {
-    background: none;
-    border: none;
-    color: var(--accent);
-    font-size: 16px;
-    padding: 0;
-}
+// Search Logic with Debounce
+let searchTimer;
+searchInput.oninput = () => {
+    clearTimeout(searchTimer);
+    searchTimer = setTimeout(() => {
+        if (searchInput.value.length > 2) {
+            performSearch(searchInput.value);
+        }
+    }, 500); // Wait 500ms after user stops typing
+};
 
-/* Grid for Search Results */
-.grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 10px;
-    padding: 10px 20px;
-    overflow-y: auto;
-    height: calc(100vh - 100px);
-}
+async function performSearch(query) {
+    // TMDB Multi-search finds Movies, TV, and People simultaneously
+    const url = `https://api.themoviedb.org/3/search/multi?api_key=${TMDB_KEY}&query=${encodeURIComponent(query)}`;
+    const res = await fetch(url).then(r => r.json());
+    
+    searchResults.innerHTML = ''; // Clear previous results
 
-/* Reuse card styles for search results */
-.grid .card {
-    min-width: unset;
-    width: 100%;
+    res.results.forEach(item => {
+        if (item.media_type === 'person' || !item.poster_path) return;
+
+        const card = document.createElement('div');
+        card.className = 'card';
+        card.innerHTML = `
+            <img class="poster" src="https://image.tmdb.org/t/p/w342${item.poster_path}">
+            <div class="card-title">${item.title || item.name}</div>
+        `;
+        
+        // Use the existing modal details function we built earlier!
+        card.onclick = () => showDetails(item.id, item.media_type);
+        
+        searchResults.appendChild(card);
+    });
 }
