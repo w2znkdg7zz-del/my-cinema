@@ -5,38 +5,36 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>MyStream Live</title>
+    <title>MyStream</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <div id="status-bar-spacer"></div>
     
     <header>
-        <h1>My Library</h1>
-        <button id="auth-btn" class="login-tag">Login with Trakt</button>
+        <h1>Discover</h1>
     </header>
 
     <main id="content">
-        <section id="collection-sec" class="hidden">
-            <h2 class="section-label">My Collection</h2>
-            <div class="horizontal-scroller" id="my-collection"></div>
-        </section>
-
-        <section id="watchlist-sec" class="hidden">
-            <h2 class="section-label">My Watchlist</h2>
-            <div class="horizontal-scroller" id="my-watchlist"></div>
+        <section>
+            <h2 class="section-label">Trending Movies</h2>
+            <div class="horizontal-scroller" id="trending-movies"></div>
         </section>
 
         <section>
-            <h2 class="section-label">Trending Now</h2>
-            <div class="horizontal-scroller" id="trending-movies"></div>
+            <h2 class="section-label">Popular TV Shows</h2>
+            <div class="horizontal-scroller" id="popular-shows"></div>
+        </section>
+
+        <section>
+            <h2 class="section-label">Most Anticipated</h2>
+            <div class="horizontal-scroller" id="anticipated"></div>
         </section>
     </main>
 
     <nav class="tab-bar">
         <div class="tab-item active" onclick="location.reload()"><span>🏠</span><label>Home</label></div>
         <div class="tab-item" id="nav-search"><span>🔍</span><label>Search</label></div>
-        <div class="tab-item" id="nav-lists"><span>📚</span><label>Lists</label></div>
     </nav>
 
     <div id="modal-overlay" class="modal-hidden">
@@ -48,7 +46,7 @@
 
     <div id="search-overlay" class="modal-hidden">
         <div class="search-header">
-            <input type="text" id="search-input" placeholder="Search everything...">
+            <input type="text" id="search-input" placeholder="Search movies & shows...">
             <button id="search-close">Cancel</button>
         </div>
         <div id="search-results" class="grid"></div>
