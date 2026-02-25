@@ -84,46 +84,32 @@ async function renderCard(title, id, type, container) {
 /* ================================
    SEE MORE (DEEP FETCH)
 ================================ */
-async function openSectionModal(apiUrl, categoryLabel, type, page = 1) {
+async function openSectionModal(containerId, categoryLabel, type, apiUrl) {
     const modal = document.getElementById('modal-overlay');
     const body = document.getElementById('modal-body');
     setScrollLock(true);
     modal.classList.remove('modal-hidden');
-
-    if (page === 1) {
-        currentPage = 1;
-        body.innerHTML = `
-            <h3 style="margin:10px;">${categoryLabel}</h3>
-            <div id="modal-grid"></div>
-        `;
-    }
-
-    const grid = document.getElementById('modal-grid');
+    
+    body.innerHTML = `
+        <h3 style="margin:0 0 15px 10px;">${categoryLabel}</h3>
+        <div class="grid" id="modal-grid">
+            <p style="color:gray; padding:20px;">Deep fetching top 100...</p>
+        </div>
+    `;
 
     try {
-        const pagedUrl = `${apiUrl}${apiUrl.includes('?') ? '&' : '?'}limit=30&page=${page}`;
-        const res = await fetch(pagedUrl, { headers: { 'trakt-api-version': '2', 'trakt-api-key': TRAKT_ID }});
+        const deepUrl = `${apiUrl}${apiUrl.includes('?') ? '&' : '?'}limit=100`;
+        const res = await fetch(deepUrl, { headers: { 'trakt-api-version': '2', 'trakt-api-key': TRAKT_ID }});
         const items = await res.json();
+        
+        const grid = document.getElementById('modal-grid');
+        grid.innerHTML = ''; 
 
         items.forEach(item => {
             const media = item.movie || item.show || item;
             if (media.ids?.tmdb) renderCard(media.title || media.name, media.ids.tmdb, type, grid);
         });
-
-        // Add "Load More" card
-        const loadMoreCard = document.createElement('div');
-        loadMoreCard.className = 'card see-more';
-        loadMoreCard.innerHTML = `<div class="poster" style="display:flex;align-items:center;justify-content:center;">+ Load More</div>`;
-        loadMoreCard.onclick = () => openSectionModal(apiUrl, categoryLabel, type, page + 1);
-        grid.appendChild(loadMoreCard);
-
-    } catch (err) {
-        console.error(err);
-        const loadMoreCard = document.createElement('div');
-        loadMoreCard.className = 'card see-more';
-        loadMoreCard.innerHTML = `<div class="poster" style="display:flex;align-items:center;justify-content:center;">Error</div>`;
-        grid.appendChild(loadMoreCard);
-    }
+    } catch (err) { body.querySelector('.grid').innerHTML = '<p>Error loading items.</p>'; }
 }
 
 async function showDetails(id, type) {
