@@ -85,10 +85,14 @@ async function renderCard(title, id, type, container) {
    SEE MORE (DEEP FETCH)
 ================================ */
 async function openSectionModal(containerId, categoryLabel, type, apiUrl) {
+    // Save these to global variables so the close button knows where to return
+    window.currentContainerId = containerId;
+    window.currentModalCategory = categoryLabel;
+    window.currentModalType = type;
+    window.currentModalUrl = apiUrl;
+
     const modal = document.getElementById('modal-overlay');
     const body = document.getElementById('modal-body');
-    setScrollLock(true);
-    modal.classList.remove('modal-hidden');
     
     body.innerHTML = `
         <h3 style="margin:0 0 15px 10px;">${categoryLabel}</h3>
@@ -227,7 +231,7 @@ function addToTrakt(id, type) {
             headers: { 'Authorization': `Bearer ${token}`, 'trakt-api-version': '2', 'trakt-api-key': TRAKT_ID, 'Content-Type': 'application/json' },
             body: JSON.stringify({ [type === 'movie' ? 'movies' : 'shows']: [{ ids: { tmdb: id } }] })
         });
-        alert('Added to Trakt!'); document.getElementById('modal-overlay').classList.add('modal-hidden'); setScrollLock(false);
+        alert('Added to Trakt!');
     }));
 }
 
@@ -242,7 +246,7 @@ function addToTMDB(id) {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ media_id: id })
         });
-        alert('Added to TMDB!'); document.getElementById('modal-overlay').classList.add('modal-hidden'); setScrollLock(false);
+        alert('Added to TMDB!');
     }));
 }
 
@@ -250,9 +254,27 @@ function addToTMDB(id) {
    CONTROLS & SEARCH
 ================================ */
 document.getElementById('modal-close').onclick = () => {
-    document.getElementById('modal-overlay').classList.add('modal-hidden');
-    if (wasSearchOpen) { document.getElementById('search-overlay').classList.remove('modal-hidden'); wasSearchOpen = false; }
-    else setScrollLock(false);
+    const modalBody = document.getElementById('modal-body');
+    const modalOverlay = document.getElementById('modal-overlay');
+    
+    // Check if we are looking at "Details". 
+    // If so, we want to go BACK to the 100-item grid instead of closing everything.
+    if (modalBody.querySelector('.details-title')) {
+        // If the 100-item grid was open before, restore it
+        if (window.currentModalCategory) {
+            openSectionModal(window.currentContainerId, window.currentModalCategory, window.currentModalType, window.currentModalUrl);
+            return; // Exit early so we don't close the whole overlay
+        }
+    }
+
+    // Otherwise, close the whole thing
+    modalOverlay.classList.add('modal-hidden');
+    if (wasSearchOpen) { 
+        document.getElementById('search-overlay').classList.remove('modal-hidden'); 
+        wasSearchOpen = false; 
+    } else {
+        setScrollLock(false);
+    }
 };
 
 document.getElementById('nav-search').onclick = () => { document.getElementById('search-overlay').classList.remove('modal-hidden'); setScrollLock(true); };
