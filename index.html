@@ -7,10 +7,10 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <title>MyStream</title>
   <link rel="stylesheet" href="./style.css">
+  <link rel="manifest" href="./manifest.json">
 </head>
 <body>
   <div id="status-bar-spacer"></div>
-  
   <header>
     <h1>Discover</h1>
     <div id="auth-bar">
@@ -35,9 +35,8 @@
   </main>
 
   <nav class="tab-bar">
-    <div class="tab-item active" id="nav-home"><span>🏠</span><label>Home</label></div>
+    <div class="tab-item active" onclick="location.reload()"><span>🏠</span><label>Home</label></div>
     <div class="tab-item" id="nav-search"><span>🔍</span><label>Search</label></div>
-    <div class="tab-item" id="nav-profile"><span>👤</span><label>Profile</label></div>
   </nav>
 
   <div id="modal-overlay" class="modal-hidden">
@@ -53,20 +52,6 @@
       <button id="search-close">Cancel</button>
     </div>
     <div id="search-results" class="grid"></div>
-  </div>
-
-  <div id="profile-overlay" class="modal-hidden">
-    <div class="search-header">
-      <div style="flex:1; font-weight:bold; font-size:18px;">My Lists</div>
-      <button id="profile-close" style="background:none; border:none; color:var(--accent);">Close</button>
-    </div>
-    <div class="service-toggle">
-      <button class="auth-btn" onclick="loadServiceLists('trakt')">Trakt Lists</button>
-      <button class="auth-btn" onclick="loadServiceLists('tmdb')">TMDB Lists</button>
-    </div>
-    <div id="list-container">
-        <p style="color:gray; text-align:center; margin-top:50px;">Select a service above to see your lists.</p>
-    </div>
   </div>
 
   <script src="script.js"></script>
