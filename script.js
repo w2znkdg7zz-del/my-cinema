@@ -256,6 +256,9 @@ document.getElementById('modal-close').onclick = () => {
 };
 
 document.getElementById('nav-search').onclick = () => { document.getElementById('search-overlay').classList.remove('modal-hidden'); setScrollLock(true); };
+document.getElementById('nav-profile').onclick = () => {
+  openServiceSelector();
+};
 document.getElementById('search-close').onclick = () => { document.getElementById('search-overlay').classList.add('modal-hidden'); setScrollLock(false); wasSearchOpen = false; };
 document.getElementById('login-trakt').onclick = loginTrakt;
 document.getElementById('login-tmdb').onclick = loginTMDB;
@@ -278,3 +281,179 @@ document.getElementById('search-input').oninput = (e) => {
         });
     }, 500);
 };
+
+/* ================================
+   LISTS SECTION
+================================ */
+
+function openServiceSelector() {
+    const modal = document.getElementById('modal-overlay');
+    const body = document.getElementById('modal-body');
+
+    modal.classList.remove('modal-hidden');
+    setScrollLock(true);
+
+    body.innerHTML = `
+        <h3>Select Service</h3>
+        <button class="list-btn" onclick="loadTraktLists()">Trakt</button>
+        <button class="list-btn" onclick="loadTMDBLists()">TMDB</button>
+    `;
+}
+
+async function loadTraktLists() {
+    const token = localStorage.getItem('trakt_token');
+    if (!token) { loginTrakt(); return; }
+
+    const body = document.getElementById('modal-body');
+    body.innerHTML = '<h3>Trakt Lists</h3>';
+
+    /* --- System Lists --- */
+    const systemLists = [
+        { name: "Watchlist", endpoint: "/users/me/watchlist/movies,shows" }
+    ];
+
+    systemLists.forEach(list => {
+        const btn = document.createElement('button');
+        btn.className = 'list-btn';
+        btn.textContent = list.name;
+        btn.onclick = () => openTraktSystemList(list.endpoint);
+        body.appendChild(btn);
+    });
+
+    /* --- Custom Lists --- */
+    const res = await fetch('https://api.trakt.tv/users/me/lists', {
+        headers: {
+            'Authorization': `Bearer ${token}`,
+            'trakt-api-version': '2',
+            'trakt-api-key': TRAKT_ID
+        }
+    });
+
+    const lists = await res.json();
+
+    lists.forEach(list => {
+        const btn = document.createElement('button');
+        btn.className = 'list-btn';
+        btn.textContent = `${list.name} (${list.item_count})`;
+        btn.onclick = () => openTraktCustomList(list.ids.slug);
+        body.appendChild(btn);
+    });
+}
+
+async function openTraktSystemList(endpoint) {
+    const token = localStorage.getItem('trakt_token');
+    const body = document.getElementById('modal-body');
+
+    body.innerHTML = `
+        <h3>Loading...</h3>
+        <div class="grid" id="modal-grid"></div>
+    `;
+
+    const res = await fetch(`https://api.trakt.tv${endpoint}`, {
+        headers: {
+            'Authorization': `Bearer ${token}`,
+            'trakt-api-version': '2',
+            'trakt-api-key': TRAKT_ID
+        }
+    });
+
+    const items = await res.json();
+    renderTraktItems(items);
+}
+
+async function openTraktCustomList(slug) {
+    const token = localStorage.getItem('trakt_token');
+    const body = document.getElementById('modal-body');
+
+    body.innerHTML = `
+        <h3>Loading...</h3>
+        <div class="grid" id="modal-grid"></div>
+    `;
+
+    const res = await fetch(
+        `https://api.trakt.tv/users/me/lists/${slug}/items`,
+        {
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'trakt-api-version': '2',
+                'trakt-api-key': TRAKT_ID
+            }
+        }
+    );
+
+    const items = await res.json();
+    renderTraktItems(items);
+}
+
+function renderTraktItems(items) {
+    const grid = document.getElementById('modal-grid');
+    grid.innerHTML = '';
+
+    items.forEach(item => {
+        const media = item.movie || item.show;
+        if (media?.ids?.tmdb) {
+            renderCard(
+                media.title || media.name,
+                media.ids.tmdb,
+                item.type || (item.movie ? 'movie' : 'tv'),
+                grid
+            );
+        }
+    });
+}
+
+async function loadTMDBLists() {
+    const session = localStorage.getItem('tmdb_session');
+    if (!session) { loginTMDB(); return; }
+
+    const body = document.getElementById('modal-body');
+    body.innerHTML = '<h3>TMDB Lists</h3>';
+
+    const accRes = await fetch(
+        `https://api.themoviedb.org/3/account?api_key=${TMDB_KEY}&session_id=${session}`
+    );
+    const account = await accRes.json();
+
+    const res = await fetch(
+        `https://api.themoviedb.org/3/account/${account.id}/lists?api_key=${TMDB_KEY}&session_id=${session}`
+    );
+
+    const lists = await res.json();
+
+    lists.results.forEach(list => {
+        const btn = document.createElement('button');
+        btn.className = 'list-btn';
+        btn.textContent = `${list.name} (${list.item_count})`;
+        btn.onclick = () => openTMDBList(list.id);
+        body.appendChild(btn);
+    });
+}
+
+async function openTMDBList(listId) {
+    const session = localStorage.getItem('tmdb_session');
+    const body = document.getElementById('modal-body');
+
+    body.innerHTML = `
+        <h3>Loading...</h3>
+        <div class="grid" id="modal-grid"></div>
+    `;
+
+    const res = await fetch(
+        `https://api.themoviedb.org/3/list/${listId}?api_key=${TMDB_KEY}&session_id=${session}`
+    );
+
+    const data = await res.json();
+    const grid = document.getElementById('modal-grid');
+    grid.innerHTML = '';
+
+    data.items.forEach(item => {
+        if (item.media_type === 'movie' || item.media_type === 'tv') {
+            renderCard(
+                item.title || item.name,
+                item.id,
+                item.media_type,
+                grid
+            );
+        }
+    });
+}
