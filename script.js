@@ -83,21 +83,50 @@ async function renderCard(title, id, type, container) {
 }
 
 /* ================================
-   MODALS & SEARCH
+   UPDATED SEE MORE MODAL (DEEP FETCH)
 ================================ */
 async function openSectionModal(containerId, categoryLabel, type, apiUrl) {
     const modal = document.getElementById('modal-overlay');
     const body = document.getElementById('modal-body');
+    
     setScrollLock(true);
     modal.classList.remove('modal-hidden');
-    body.innerHTML = `<h3 style="margin:0 0 15px 10px;">${categoryLabel}</h3><div class="grid"></div>`;
-    const items = sectionDataCache[containerId] || await (await fetch(apiUrl, { headers: { 'trakt-api-version': '2', 'trakt-api-key': TRAKT_ID }})).json();
-    items.forEach(item => {
-        const media = item.movie || item.show || item;
-        if (media.ids?.tmdb) renderCard(media.title || media.name, media.ids.tmdb, type, body.querySelector('.grid'));
-    });
-}
+    
+    // 1. Show a loading state inside the grid
+    body.innerHTML = `
+        <h3 style="margin:0 0 15px 10px;">${categoryLabel}</h3>
+        <div class="grid" id="modal-grid">
+            <p style="color:gray; padding:20px;">Fetching more items...</p>
+        </div>
+    `;
+    
+    try {
+        // 2. Fetch a much larger set (Limit 100) specifically for the modal
+        // We append the limit parameter to the Trakt URL
+        const deepUrl = `${apiUrl}${apiUrl.includes('?') ? '&' : '?'}limit=100`;
+        
+        const res = await fetch(deepUrl, { 
+            headers: { 
+                'trakt-api-version': '2', 
+                'trakt-api-key': TRAKT_ID 
+            }
+        });
+        const items = await res.json();
+        
+        const grid = document.getElementById('modal-grid');
+        grid.innerHTML = ''; // Clear loading text
 
+        // 3. Render the expanded list
+        items.forEach(item => {
+            const media = item.movie || item.show || item;
+            if (media.ids?.tmdb) {
+                renderCard(media.title || media.name, media.ids.tmdb, type, grid);
+            }
+        });
+    } catch (err) {
+        document.getElementById('modal-grid').innerHTML = '<p>Error loading expanded list.</p>';
+    }
+}
 async function showDetails(id, type) {
     const modal = document.getElementById('modal-overlay');
     const body = document.getElementById('modal-body');
