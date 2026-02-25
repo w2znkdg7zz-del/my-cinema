@@ -30,8 +30,8 @@ function setScrollLock(lock) {
     document.body.style.overflow = lock ? 'hidden' : '';
     document.body.style.position = lock ? 'fixed' : '';
     document.body.style.width = lock ? '100%' : '';
-    // Don't prevent scroll inside overlays that already handle their own scrolling
 }
+
 function cleanURL() {
     window.history.replaceState({}, document.title, window.location.pathname);
 }
