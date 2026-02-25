@@ -3,6 +3,7 @@
   --text: #ffffff;
   --card: #1c1c1e;
   --accent: #0a84ff;
+  --success: #34c759;
 }
 
 body {
@@ -86,14 +87,12 @@ h1 {
 ================================ */
 .grid {
   display: grid;
-  /* Fixed to 3 columns as requested */
   grid-template-columns: repeat(3, 1fr); 
   gap: 12px;
   padding: 15px;
-  padding-bottom: 120px; /* Extra space for tab bar */
+  padding-bottom: 120px;
 }
 
-/* Reset fixed widths for cards inside a grid so they don't overlap */
 .grid .card {
   min-width: 0;
   max-width: none;
@@ -101,7 +100,7 @@ h1 {
 }
 
 .grid .card-title {
-  font-size: 10px; /* Slightly smaller for the tighter grid */
+  font-size: 10px;
   padding: 6px;
 }
 
@@ -158,13 +157,12 @@ h1 {
   background: rgba(0, 0, 0, 0.95);
   backdrop-filter: blur(15px);
   z-index: 1000;
-  /* Fix for scrolling being "stuck" */
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
 }
 
 #modal-content {
-  position: relative; /* Changed from absolute to allow natural scroll flow */
+  position: relative;
   margin-top: 10vh;
   width: 100%;
   min-height: 90vh;
@@ -175,7 +173,7 @@ h1 {
 }
 
 #modal-close {
-  position: sticky; /* Keeps close button visible while scrolling details */
+  position: sticky;
   top: 15px;
   left: calc(100% - 50px);
   background: #333;
@@ -189,7 +187,7 @@ h1 {
 }
 
 /* ================================
-   DETAILS & BUTTONS
+   DETAILS & TOGGLE BUTTONS
 ================================ */
 .details-poster {
   width: 100%;
@@ -208,6 +206,34 @@ h1 {
   margin-top: 10px;
 }
 
+/* The 2x2 Button Layout */
+.action-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-top: 20px;
+}
+
+.action-btn {
+    padding: 12px 5px;
+    font-size: 11px;
+    font-weight: bold;
+    background: #2c2c2e;
+    color: white;
+    border: 1px solid #3a3a3c;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-align: center;
+}
+
+/* The "Active/Already In List" state */
+.action-btn.active {
+    background: rgba(52, 199, 89, 0.1) !important;
+    border-color: var(--success) !important;
+    color: var(--success) !important;
+}
+
 .trailer-btn {
   display: block;
   width: 100%;
@@ -222,27 +248,8 @@ h1 {
   box-sizing: border-box;
 }
 
-.auth-btn, .action-btn, .list-btn {
-  background: var(--accent);
-  border: none;
-  color: white;
-  border-radius: 8px;
-  font-weight: bold;
-  cursor: pointer;
-}
-
-.auth-btn { padding: 8px 12px; margin-right: 8px; }
-.action-btn { width: 100%; margin-top: 10px; padding: 12px; }
-.list-btn { 
-  display: block; 
-  width: 100%; 
-  padding: 12px; 
-  margin-bottom: 10px; 
-  text-align: left; 
-}
-
 /* ================================
-   SEARCH SPECIFIC
+   SEARCH & AUTH
 ================================ */
 .search-header {
   position: sticky;
@@ -273,35 +280,33 @@ h1 {
   font-size: 16px;
 }
 
+.auth-btn {
+  background: var(--accent);
+  border: none;
+  padding: 8px 12px;
+  color: white;
+  border-radius: 8px;
+  margin-right: 8px;
+}
+
 /* ================================
-   SEE MORE CARD & MODAL GRID
+   SEE MORE CARD
 ================================ */
 .card.see-more {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(10, 132, 255, 0.2);
+  background: rgba(10, 132, 255, 0.15);
   color: var(--accent);
   font-weight: 700;
+  border: 1px dashed var(--accent);
 }
 
-.card.see-more:hover {
-  transform: scale(1.05);
-  background: rgba(10, 132, 255, 0.3);
-}
-
-/* Fix for the See More card grey area */
 .card.see-more .poster {
-    height: 100%;
-    width: 100%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-#modal-body h3 {
-  color: var(--text);
-  font-size: 20px;
-  font-weight: 800;
-  margin: 10px;
+  background: transparent !important;
+  height: 100%;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
