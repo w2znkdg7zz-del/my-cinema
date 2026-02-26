@@ -106,6 +106,15 @@ function openLibraryView(filter = 'all') {
         <div class="grid" id="library-grid"></div>
     `;
 
+   // After the filter buttons in openLibraryView():
+body.innerHTML += `
+  <div style="display:flex; gap:10px; padding:10px;">
+    <button class="list-btn" onclick="exportLibrary()">Export Library</button>
+    <button class="list-btn" onclick="importLibrary()">Import Library</button>
+    <input type="file" id="import-file" style="display:none;" accept=".json">
+  </div>
+`;
+
     const grid = document.getElementById('library-grid');
 
     if (items.length === 0) {
@@ -116,6 +125,50 @@ function openLibraryView(filter = 'all') {
     items.forEach(item => {
         renderLibraryCard(item, grid);
     });
+}
+
+function exportLibrary() {
+    const lib = getLibrary();
+    const dataStr = JSON.stringify(lib, null, 2);
+    const blob = new Blob([dataStr], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "myLibrary.json";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+
+    alert("Library exported as myLibrary.json");
+}
+
+function importLibrary() {
+    const fileInput = document.getElementById('import-file');
+    fileInput.click(); // open file selector
+
+    fileInput.onchange = async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        try {
+            const text = await file.text();
+            const data = JSON.parse(text);
+
+            if (data.movies && data.tv) {
+                saveLibrary(data); // overwrite current library
+                alert("Library imported successfully!");
+                openLibraryView(); // refresh modal
+            } else {
+                alert("Invalid library JSON file.");
+            }
+        } catch (err) {
+            alert("Error reading file: " + err.message);
+        }
+
+        fileInput.value = ""; // reset for future imports
+    };
 }
 
 function renderLibraryCard(item, container) {
