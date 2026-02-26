@@ -106,21 +106,14 @@ function openLibraryView(filter = 'all') {
         <div class="grid" id="library-grid"></div>
     `;
 
-   // Remove old inline buttons at the bottom
-// Add floating buttons
-const actions = document.createElement('div');
-actions.className = 'library-actions';
-actions.innerHTML = `
-  <button class="list-btn" onclick="exportLibrary()">📤 Export</button>
-  <button class="list-btn" onclick="importLibrary()">📥 Import</button>
-  <input type="file" id="import-file" style="display:none;" accept=".json">
+   // Inside openLibraryView() after filter buttons
+body.innerHTML += `
+  <div style="display:flex; gap:10px; padding:10px; border-bottom:1px solid #444; margin-bottom:10px;">
+    <button class="list-btn" onclick="exportLibrary()">📤 Export</button>
+    <button class="list-btn" onclick="importLibrary()">📥 Import</button>
+    <input type="file" id="import-file" style="display:none;" accept=".json">
+  </div>
 `;
-body.appendChild(actions);
-
-// Optional: file input handler
-document.getElementById('import-file').onchange = (e) => {
-    importLibrary(e.target.files[0]);
-};
 
     const grid = document.getElementById('library-grid');
 
