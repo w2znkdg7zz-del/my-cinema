@@ -241,22 +241,6 @@ h1 {
   text-align: left; 
 }
 
-.card .remove-icon {
-    position: absolute;
-    top: 6px;
-    left: 6px;
-    font-size: 16px;
-    background: rgba(0,0,0,0.6);
-    padding: 3px;
-    border-radius: 4px;
-    cursor: pointer;
-    z-index: 2;
-}
-
-.card .remove-icon:hover {
-    background: rgba(0,0,0,0.9);
-}
-
 /* ================================
    SEARCH SPECIFIC
 ================================ */
