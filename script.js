@@ -120,7 +120,6 @@ function openLibraryView(filter = 'all') {
 
 function renderLibraryCard(item, container) {
     const card = document.createElement('div');
-   trash.className = 'remove-icon';
     card.className = 'card';
     card.innerHTML = `
         <div class="poster"></div>
